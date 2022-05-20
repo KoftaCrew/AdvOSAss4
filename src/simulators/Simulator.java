@@ -4,9 +4,9 @@ import data.Directory;
 import data.File;
 
 abstract public class Simulator {
-    private final Directory root;
-    private final boolean[] emptyBlocks;
-    private final int size;
+    protected final Directory root;
+    protected final boolean[] emptyBlocks;
+    protected final int size;
 
     public Simulator(int size) {
         root = new Directory("root");
@@ -14,12 +14,12 @@ abstract public class Simulator {
         this.size = size;
     }
 
-    abstract public boolean createFile(String fileName, int size);
+    abstract public boolean createFile(String path, int size);
 
     public boolean createFolder(String path) {
         String[] pathArray = path.split("/");
         String folderName = pathArray[pathArray.length - 1];
-        Directory currentDir = navigateToEnclosingFolder(path, folderName);
+        Directory currentDir = navigateToEnclosingFolder(path);
 
         if (currentDir == null)
             return false;
@@ -32,12 +32,12 @@ abstract public class Simulator {
         return true;
     }
 
-    abstract public boolean deleteFile(String fileName);
+    abstract public boolean deleteFile(String path);
 
     public boolean deleteFolder(String path) {
         String[] pathArray = path.split("/");
         String folderName = pathArray[pathArray.length - 1];
-        Directory currentDir = navigateToEnclosingFolder(path, folderName);
+        Directory currentDir = navigateToEnclosingFolder(path);
 
         if (currentDir == null)
             return false;
@@ -59,12 +59,14 @@ abstract public class Simulator {
                 return false;
         }
 
+        currentDir.removeDirectory(target);
+
         return true;
     }
 
-    private Directory navigateToEnclosingFolder(String pathString, String lastElement) {
+    protected Directory navigateToEnclosingFolder(String pathString) {
         String[] path = pathString.split("/");
-        if (path[0].equalsIgnoreCase("root")) {
+        if (!path[0].equalsIgnoreCase("root")) {
             return null;
         }
 
@@ -126,8 +128,13 @@ abstract public class Simulator {
     }
 
     public String displayDiskStructure() {
-        StringBuilder builder = new StringBuilder("├ root\n");
-        String[] rootStructure = displayDiskStructure(root).split("\n");
+        StringBuilder builder = new StringBuilder("└ root\n");
+        String rootStructureString = displayDiskStructure(root);
+
+        if (rootStructureString.isBlank())
+            return builder.toString();
+
+        String[] rootStructure = rootStructureString.split("\n");
 
         for (String s :
                 rootStructure) {
@@ -148,15 +155,29 @@ abstract public class Simulator {
         for (Directory d :
                 directory.getDirectories()) {
             iterator++;
+            if (elementsCount > iterator) {
+                builder
+                        .append("├ ");
+            }
+            else {
+                builder
+                        .append("└ ");
+            }
+
             builder
-                    .append("├ ")
                     .append(d.getName())
                     .append("\n");
-            String[] dirStructure = displayDiskStructure(d).split("\n");
+
+            String dirStructureString = displayDiskStructure(d);
+
+            if (dirStructureString.isBlank())
+                continue;
+
+            String[] dirStructure = dirStructureString.split("\n");
 
             for (String s :
                     dirStructure) {
-                if (elementsCount < iterator) {
+                if (elementsCount > iterator) {
                     builder
                             .append("│  ");
                 }
@@ -173,8 +194,17 @@ abstract public class Simulator {
         for (File f :
                 directory.getFiles()) {
             iterator++;
+
+            if (elementsCount > iterator) {
+                builder
+                        .append("├ ");
+            }
+            else {
+                builder
+                        .append("└ ");
+            }
+
             builder
-                    .append("├ ")
                     .append(f.getName())
                     .append("\n");
         }
