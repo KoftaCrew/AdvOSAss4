@@ -1,6 +1,11 @@
 import simulators.ContiguousSimulator;
+import simulators.IndexedSimulator;
+import simulators.LinkedSimulator;
 import simulators.Simulator;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Scanner;
 
 public class Main {
@@ -19,6 +24,7 @@ public class Main {
                     createNewVfs();
                     return;
                 case 2:
+                    loadVfs();
                     return;
                 case 3:
                     return;
@@ -45,11 +51,19 @@ public class Main {
                     simulatorShell();
                     return;
                 case 2:
+                    s = new IndexedSimulator(size);
+                    simulatorShell();
                     return;
                 case 3:
+                    s = new LinkedSimulator(size);
+                    simulatorShell();
                     return;
             }
         }
+    }
+
+    private static void loadVfs() {
+
     }
 
     private static void simulatorShell() {
@@ -92,7 +106,11 @@ public class Main {
                 else if (command[0].equalsIgnoreCase("DisplayDiskStructure")){
                     System.out.println(s.displayDiskStructure());
                 }
+                else if (command[0].equalsIgnoreCase("DisplayStorageInfo")){
+                    System.out.println(s.displayStorageInfo());
+                }
                 else if (command[0].equalsIgnoreCase("Quit")){
+                    saveSimulator();
                     return;
                 }
                 else {
@@ -103,5 +121,43 @@ public class Main {
                 System.out.println(e.getMessage());
             }
         }
+    }
+
+    private static void saveSimulator() {
+        while (true) {
+            System.out.println("Virtual file system save location: (':cancel' to cancel save)");
+            String path = scanner.nextLine() + ".vfs";
+
+            if (path.equalsIgnoreCase(":cancel"))
+                return;
+
+            File f = new File(path);
+            if (f.exists() && !f.isDirectory()) {
+                System.out.println("Error: File already exist, overwrite? (y/n)");
+                String choice = scanner.nextLine();
+
+                if (choice.equalsIgnoreCase("y")) {
+                    if (saveSimulatorFile(f))
+                        return;
+                }
+            }
+            else if(f.isDirectory()) {
+                System.out.println("Error: Directory exists with same name");
+            }
+            else {
+                if (saveSimulatorFile(f))
+                    return;
+            }
+        }
+    }
+
+    private static boolean saveSimulatorFile(File f) {
+        try (FileOutputStream fos = new FileOutputStream(f)) {
+            fos.write(s.saveToFile());
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+            return false;
+        }
+        return true;
     }
 }

@@ -5,16 +5,16 @@ import data.File;
 
 abstract public class Simulator {
     protected final Directory root;
-    protected final boolean[] emptyBlocks;
+    protected final boolean[] allocatedBlocks;
     protected final int size;
 
     public Simulator(int size) {
         root = new Directory("root");
-        emptyBlocks = new boolean[size];
+        allocatedBlocks = new boolean[size];
         this.size = size;
     }
 
-    abstract public boolean createFile(String path, int size);
+    abstract public boolean createFile(String path, int fileSize);
 
     public boolean createFolder(String path) {
         String[] pathArray = path.split("/");
@@ -82,12 +82,7 @@ abstract public class Simulator {
     }
 
     public String displayDiskStatus() {
-        int allocatedCount = 0;
-        for (boolean b :
-                emptyBlocks) {
-            if (b)
-                allocatedCount++;
-        }
+        int allocatedCount = getAllocatedSpace();
 
         StringBuilder builder = new StringBuilder();
         builder.append("Disk status:\n")
@@ -99,7 +94,7 @@ abstract public class Simulator {
 
         boolean comma = false;
         for (int i = 0; i < size; i++) {
-            if (!emptyBlocks[i]) {
+            if (!allocatedBlocks[i]) {
                 if (comma)
                     builder.append(", ");
                 else
@@ -114,7 +109,7 @@ abstract public class Simulator {
 
         comma = false;
         for (int i = 0; i < size; i++) {
-            if (emptyBlocks[i]) {
+            if (allocatedBlocks[i]) {
                 if (comma)
                     builder.append(", ");
                 else
@@ -125,6 +120,16 @@ abstract public class Simulator {
         }
 
         return builder.toString();
+    }
+
+    protected int getAllocatedSpace() {
+        int allocatedCount = 0;
+        for (boolean b :
+                allocatedBlocks) {
+            if (b)
+                allocatedCount++;
+        }
+        return allocatedCount;
     }
 
     public String displayDiskStructure() {
@@ -211,6 +216,8 @@ abstract public class Simulator {
 
         return builder.toString();
     }
+
+    abstract public String displayStorageInfo();
 
     abstract public byte[] saveToFile();
 }

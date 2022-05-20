@@ -33,11 +33,11 @@ public class ContiguousSimulator extends Simulator {
         int start = 0;
 
         for (int i = 0; i < size; i++) {
-            if (!emptyBlocks[i] && !inBlock) {
+            if (!allocatedBlocks[i] && !inBlock) {
                 start = i;
                 inBlock = true;
             }
-            else if (emptyBlocks[i] && inBlock) {
+            else if (allocatedBlocks[i] && inBlock) {
                 blocks.add(new Block(start, i - 1));
                 inBlock = false;
             }
@@ -65,7 +65,7 @@ public class ContiguousSimulator extends Simulator {
         Block fileBlock = new Block(minBlock.start, minBlock.start + fileSize - 1);
 
         for (int i = fileBlock.start; i <= fileBlock.end; i++) {
-            emptyBlocks[i] = true;
+            allocatedBlocks[i] = true;
         }
 
         currentDir.addFile(file);
@@ -90,12 +90,27 @@ public class ContiguousSimulator extends Simulator {
 
         Block pointer = filePointers.remove(target);
         for (int i = pointer.start; i <= pointer.end; i++) {
-            emptyBlocks[i] = false;
+            allocatedBlocks[i] = false;
         }
 
         currentDir.removeFile(target);
 
         return true;
+    }
+
+    @Override
+    public String displayStorageInfo() {
+        StringBuilder builder = new StringBuilder("Files:\n");
+        filePointers.forEach((file, block) -> {
+            builder.append(file.getName())
+                    .append("\t")
+                    .append(block.start)
+                    .append("\t")
+                    .append(block.end)
+                    .append("\n");
+        });
+
+        return builder.toString();
     }
 
     @Override
