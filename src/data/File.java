@@ -1,3 +1,5 @@
+package data;
+
 public class File {
     private final String name;
     private final int size;
