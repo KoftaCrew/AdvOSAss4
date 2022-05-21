@@ -92,7 +92,7 @@ public class IndexedSimulator extends Simulator{
     public String displayStorageInfo() {
         StringBuilder builder = new StringBuilder("Files:\n");
         filePointers.forEach((file, filePointer) -> {
-            builder.append(file.getName())
+            builder.append(file.getPath())
                     .append("\t")
                     .append(filePointer)
                     .append("\n");

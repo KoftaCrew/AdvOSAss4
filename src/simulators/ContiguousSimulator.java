@@ -100,7 +100,7 @@ public class ContiguousSimulator extends Simulator {
     public String displayStorageInfo() {
         StringBuilder builder = new StringBuilder("Files:\n");
         filePointers.forEach((file, block) -> {
-            builder.append(file.getName())
+            builder.append(file.getPath())
                     .append("\t")
                     .append(block.start)
                     .append("\t")
