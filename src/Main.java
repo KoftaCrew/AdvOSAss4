@@ -4,8 +4,10 @@ import simulators.LinkedSimulator;
 import simulators.Simulator;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Scanner;
 
 public class Main {
@@ -63,7 +65,42 @@ public class Main {
     }
 
     private static void loadVfs() {
+        System.out.println("Enter file path:");
+        String path = scanner.nextLine();
 
+        if (!path.endsWith(".vfs"))
+            path += ".vfs";
+
+        File f = new File(path);
+        byte[] data = new byte[0];
+        try (FileInputStream fis = new FileInputStream(f)) {
+            data = fis.readAllBytes();
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+
+        ByteBuffer byteBuffer = ByteBuffer.allocate(data.length).put(data);
+        byteBuffer.position(0);
+        StringBuilder header = new StringBuilder();
+        for (int i = 0; i < 8; i++) {
+            header.append((char)(byteBuffer.get()));
+        }
+
+        if (header.toString().equals("OS_VFS#C")) {
+            s = ContiguousSimulator.loadFromFile(data);
+            simulatorShell();
+        }
+        else if (header.toString().equals("OS_VFS#L")) {
+            s = LinkedSimulator.loadFromFile(data);
+            simulatorShell();
+        }
+        else if (header.toString().equals("OS_VFS#I")) {
+            s = IndexedSimulator.loadFromFile(data);
+            simulatorShell();
+        }
+        else {
+            System.out.println("Invalid file");
+        }
     }
 
     private static void simulatorShell() {

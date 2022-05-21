@@ -7,13 +7,19 @@ public class Directory {
     private final String name;
     private final List<Directory> directories = new ArrayList<>();
     private final List<File> files = new ArrayList<>();
+    private final Directory parent;
 
-    public Directory(String name) {
+    public Directory(String name, Directory parent) {
         this.name = name;
+        this.parent = parent;
     }
 
     public String getName() {
         return name;
+    }
+
+    public Directory getParent() {
+        return parent;
     }
 
     public List<Directory> getDirectories() {

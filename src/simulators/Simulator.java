@@ -3,13 +3,23 @@ package simulators;
 import data.Directory;
 import data.File;
 
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.List;
+
 abstract public class Simulator {
-    protected final Directory root;
+    protected static final byte DS = 0x01;
+    protected static final byte FS = 0x02;
+    protected static final byte E = 0x04;
+    protected static final byte P = 0x05;
+
+    protected Directory root;
     protected final boolean[] allocatedBlocks;
     protected final int size;
 
     public Simulator(int size) {
-        root = new Directory("root");
+        root = new Directory("root", null);
         allocatedBlocks = new boolean[size];
         this.size = size;
     }
@@ -27,7 +37,7 @@ abstract public class Simulator {
         if (currentDir.getDirectory(folderName) != null)
             return false;
 
-        currentDir.addDirectory(new Directory(folderName));
+        currentDir.addDirectory(new Directory(folderName, currentDir));
 
         return true;
     }
@@ -220,4 +230,117 @@ abstract public class Simulator {
     abstract public String displayStorageInfo();
 
     abstract public byte[] saveToFile();
+
+    protected List<Byte> saveCommonInfo(String header) {
+        List<Byte> file = new ArrayList<>();
+
+        // File header
+        addByteArrayToList(header.getBytes(), file);
+
+        // File system size
+        addByteArrayToList(intToByteArray(size), file);
+
+        // Allocation bits
+        int allocationBytes = (int) Math.ceil((float) size / 8);
+        BitSet allocationBits = new BitSet(size);
+        for (int i = 0; i < size; i++) {
+            allocationBits.set(i, allocatedBlocks[i]);
+        }
+
+        addByteArrayToList(ByteBuffer.allocate(allocationBytes).put(allocationBits.toByteArray()).array(), file);
+
+        // Disk structure
+        addByteArrayToList(directoryBytes(root), file);
+
+        return file;
+    }
+
+
+    private byte[] directoryBytes(Directory root) {
+        List<Byte> result = new ArrayList<>();
+
+        result.add(DS);
+        String fullPath = root.getName();
+        addByteArrayToList(fullPath.getBytes(), result);
+
+        for (Directory d :
+                root.getDirectories()) {
+            addByteArrayToList(directoryBytes(d), result);
+        }
+
+        for (File f :
+                root.getFiles()) {
+            result.add(FS);
+            addByteArrayToList((f.getName()).getBytes(), result);
+            result.add(E);
+            addByteArrayToList(intToByteArray(f.getSize()), result);
+        }
+
+        result.add(E);
+
+        return byteListToArray(result);
+    }
+
+    protected static Directory readDirectoryStructure(ByteBuffer byteBuffer, Directory parent) {
+        Directory result;
+        byte currentByte;
+
+        List<Byte> nameBytes = new ArrayList<>();
+        currentByte = byteBuffer.get();
+        while (currentByte != DS && currentByte != FS && currentByte != E) {
+            nameBytes.add(currentByte);
+            currentByte = byteBuffer.get();
+        }
+
+        result = new Directory(new String(byteListToArray(nameBytes)), parent);
+        while (currentByte != E){
+            if (currentByte == DS) {
+                result.addDirectory(readDirectoryStructure(byteBuffer, result));
+            }
+            else if (currentByte == FS) {
+                result.addFile(readFileStructure(byteBuffer, result));
+            }
+            currentByte = byteBuffer.get();
+        }
+
+        return result;
+    }
+
+    protected static File readFileStructure(ByteBuffer byteBuffer, Directory parent) {
+        File result;
+        byte currentByte;
+
+        List<Byte> nameBytes = new ArrayList<>();
+        currentByte = byteBuffer.get();
+        while (currentByte != E) {
+            nameBytes.add(currentByte);
+            currentByte = byteBuffer.get();
+        }
+
+        int size = byteBuffer.getInt();
+
+        result = new File(new String(byteListToArray(nameBytes)), size, parent);
+
+        return result;
+    }
+
+    protected static void addByteArrayToList(final byte[] array, final List<Byte> list) {
+        for (byte b :
+                array) {
+            list.add(b);
+        }
+    }
+
+    protected static byte[] byteListToArray(List<Byte> list) {
+        byte[] bytes = new byte[list.size()];
+        for (int i = 0; i < list.size(); i++) {
+            bytes[i] = list.get(i);
+        }
+
+        return bytes;
+    }
+
+    protected static byte[] intToByteArray(int i) {
+        return ByteBuffer.allocate(4).putInt(i).array();
+    }
 }

@@ -3,10 +3,8 @@ package simulators;
 import data.Directory;
 import data.File;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.nio.ByteBuffer;
+import java.util.*;
 
 public class ContiguousSimulator extends Simulator {
     private final Map<File, Block> filePointers = new HashMap<>();
@@ -27,7 +25,7 @@ public class ContiguousSimulator extends Simulator {
         if (currentDir.getFile(fileName) != null)
             return false;
 
-        File file = new File(fileName, fileSize);
+        File file = new File(fileName, fileSize, currentDir);
         List<Block> blocks = new ArrayList<>();
         boolean inBlock = false;
         int start = 0;
@@ -115,11 +113,84 @@ public class ContiguousSimulator extends Simulator {
 
     @Override
     public byte[] saveToFile() {
-        return new byte[0];
+        List<Byte> file = saveCommonInfo("OS_VFS#C");
+
+        // File pointers
+        filePointers.forEach((f, block) -> {
+            file.add(FS);
+            addByteArrayToList(intToByteArray(block.start), file);
+            addByteArrayToList(intToByteArray(block.end), file);
+            addByteArrayToList(f.getPath().getBytes(), file);
+        });
+
+        return byteListToArray(file);
     }
 
     public static ContiguousSimulator loadFromFile(byte[] data) {
-        return new ContiguousSimulator(0);
+        ByteBuffer byteBuffer = ByteBuffer.allocate(data.length).put(data).position(0);
+        StringBuilder header = new StringBuilder();
+        for (int i = 0; i < 8; i++) {
+            header.append((char) byteBuffer.get());
+        }
+
+        // File header
+        if (!header.toString().equals("OS_VFS#C"))
+            return null;
+
+        // File system size
+        int size = byteBuffer.getInt();
+
+        ContiguousSimulator result = new ContiguousSimulator(size);
+
+        // Allocation bits
+        int allocationBytes = (int) Math.ceil((float) size / 8);
+        byte[] allocationByteArray = new byte[allocationBytes];
+        byteBuffer.get(allocationByteArray);
+        BitSet allocationBits = BitSet.valueOf(allocationByteArray);
+        for (int i = 0; i < size; i++) {
+            result.allocatedBlocks[i] = allocationBits.get(i);
+        }
+
+        if (!byteBuffer.hasRemaining()) {
+            return result;
+        }
+
+        // Disk structure
+        byte currentByte = byteBuffer.get();
+        if (currentByte == DS) {
+            result.root = readDirectoryStructure(byteBuffer, null);
+        }
+
+        if (!byteBuffer.hasRemaining()) {
+            return result;
+        }
+
+        currentByte = byteBuffer.get();
+        if (currentByte == FS) {
+            while (byteBuffer.hasRemaining()) {
+                int start = byteBuffer.getInt();
+                int end = byteBuffer.getInt();
+
+                List<Byte> nameBytes = new ArrayList<>();
+                currentByte = byteBuffer.get();
+                while (byteBuffer.hasRemaining() && currentByte != FS) {
+                    nameBytes.add(currentByte);
+                    currentByte = byteBuffer.get();
+                }
+
+                if (currentByte != FS)
+                    nameBytes.add(currentByte);
+
+                String path = new String(byteListToArray(nameBytes));
+                String[] pathArray = path.split("/");
+                String fileName = pathArray[pathArray.length - 1];
+                Directory currentDir = result.navigateToEnclosingFolder(path);
+
+                result.filePointers.put(currentDir.getFile(fileName), new Block(start, end));
+            }
+        }
+
+        return result;
     }
 
     static private class Block {

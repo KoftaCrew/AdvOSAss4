@@ -3,8 +3,8 @@ package simulators;
 import data.Directory;
 import data.File;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.ByteBuffer;
+import java.util.*;
 
 public class LinkedSimulator extends Simulator{
     private Map<File, FilePointer> filePointers = new HashMap<>();
@@ -26,7 +26,7 @@ public class LinkedSimulator extends Simulator{
         if (currentDir.getFile(fileName) != null)
             return false;
 
-        File file = new File(fileName, fileSize);
+        File file = new File(fileName, fileSize, currentDir);
 
         if (size - getAllocatedSpace() < fileSize)
             return false;
@@ -121,7 +121,103 @@ public class LinkedSimulator extends Simulator{
 
     @Override
     public byte[] saveToFile() {
-        return new byte[0];
+        List<Byte> file = saveCommonInfo("OS_VFS#L");
+
+        // File pointers
+        filePointers.forEach((f, block) -> {
+            file.add(FS);
+            addByteArrayToList(intToByteArray(block.start), file);
+            addByteArrayToList(intToByteArray(block.end), file);
+            addByteArrayToList(f.getPath().getBytes(), file);
+        });
+
+        links.forEach((from, to) -> {
+            file.add(P);
+            addByteArrayToList(intToByteArray(from), file);
+            addByteArrayToList(intToByteArray(to), file);
+        });
+
+        return byteListToArray(file);
+    }
+
+    public static Simulator loadFromFile(byte[] data) {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(data.length).put(data).position(0);
+        StringBuilder header = new StringBuilder();
+        for (int i = 0; i < 8; i++) {
+            header.append((char) byteBuffer.get());
+        }
+
+        // File header
+        if (!header.toString().equals("OS_VFS#L"))
+            return null;
+
+        // File system size
+        int size = byteBuffer.getInt();
+
+        LinkedSimulator result = new LinkedSimulator(size);
+
+        // Allocation bits
+        int allocationBytes = (int) Math.ceil((float) size / 8);
+        byte[] allocationByteArray = new byte[allocationBytes];
+        byteBuffer.get(allocationByteArray);
+        BitSet allocationBits = BitSet.valueOf(allocationByteArray);
+        for (int i = 0; i < size; i++) {
+            result.allocatedBlocks[i] = allocationBits.get(i);
+        }
+
+        if (!byteBuffer.hasRemaining()) {
+            return result;
+        }
+
+        // Disk structure
+        byte currentByte = byteBuffer.get();
+        if (currentByte == DS) {
+            result.root = readDirectoryStructure(byteBuffer, null);
+        }
+
+        if (!byteBuffer.hasRemaining()) {
+            return result;
+        }
+
+        currentByte = byteBuffer.get();
+        if (currentByte == FS) {
+            while (byteBuffer.hasRemaining() && currentByte != P) {
+                int start = byteBuffer.getInt();
+                int end = byteBuffer.getInt();
+
+                List<Byte> nameBytes = new ArrayList<>();
+                currentByte = byteBuffer.get();
+                while (byteBuffer.hasRemaining() && currentByte != FS && currentByte != P) {
+                    nameBytes.add(currentByte);
+                    currentByte = byteBuffer.get();
+                }
+
+                if (currentByte != FS && currentByte != P)
+                    nameBytes.add(currentByte);
+
+                String path = new String(byteListToArray(nameBytes));
+                String[] pathArray = path.split("/");
+                String fileName = pathArray[pathArray.length - 1];
+                Directory currentDir = result.navigateToEnclosingFolder(path);
+
+                result.filePointers.put(currentDir.getFile(fileName), new FilePointer(start, end));
+            }
+        }
+
+        if (!byteBuffer.hasRemaining()) {
+            return result;
+        }
+
+        while (byteBuffer.hasRemaining() && currentByte == P) {
+            int from = byteBuffer.getInt();
+            int to = byteBuffer.getInt();
+
+            result.links.put(from, to);
+            if(byteBuffer.hasRemaining())
+                currentByte = byteBuffer.get();
+        }
+
+        return result;
     }
 
     private static class FilePointer {
