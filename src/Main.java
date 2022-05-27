@@ -1,20 +1,21 @@
+import authentication.Login;
+import authentication.Signup;
+import protection.User;
 import simulators.ContiguousSimulator;
 import simulators.IndexedSimulator;
 import simulators.LinkedSimulator;
 import simulators.Simulator;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.Scanner;
 
 public class Main {
     static private Simulator s = null;
     static private final Scanner scanner = new Scanner(System.in);
+    private static User user = null;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws FileNotFoundException {
         while (true) {
             System.out.println("1- Create new virtual file system");
             System.out.println("2- Load existing file system");
@@ -32,6 +33,7 @@ public class Main {
                     return;
             }
         }
+
     }
 
     private static void createNewVfs() {
