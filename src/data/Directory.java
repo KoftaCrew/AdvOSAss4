@@ -67,4 +67,23 @@ public class Directory {
 
         return null;
     }
+
+    public String getPath() {
+        Stack<String> stack = new Stack<>();
+        stack.push(name);
+
+        Directory current = parent;
+        while (current != null) {
+            stack.push(current.getName());
+            current = current.getParent();
+        }
+
+        StringBuilder builder = new StringBuilder(stack.pop());
+        while (!stack.isEmpty()) {
+            builder.append("/")
+                    .append(stack.pop());
+        }
+
+        return builder.toString();
+    }
 }

@@ -1,5 +1,5 @@
-import authentication.Login;
-import authentication.Signup;
+import authentication.Authentication;
+import data.Directory;
 import protection.User;
 import simulators.ContiguousSimulator;
 import simulators.IndexedSimulator;
@@ -8,14 +8,19 @@ import simulators.Simulator;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
-public class Main {
-    static private Simulator s = null;
-    static private final Scanner scanner = new Scanner(System.in);
-    private static User user = null;
 
-    public static void main(String[] args) throws FileNotFoundException {
+public class Main {
+    private static Simulator s = null;
+    private static final Scanner scanner = new Scanner(System.in);
+    private static User user = null;
+    private static Map<Directory,Map<User,Integer>> capabilityMap = new HashMap<>();
+    private static Authentication authenticator = Authentication.getInstance();
+
+    public static void main(String[] args){
         while (true) {
             System.out.println("1- Create new virtual file system");
             System.out.println("2- Load existing file system");
@@ -133,10 +138,15 @@ public class Main {
                         System.out.println("Error: Can't delete this file");
                     }
                 }
-                else if (command[0].equalsIgnoreCase("DeleteFolder") && command.length == 2){
-                    boolean success = s.deleteFolder(command[1]);
-                    if (!success) {
-                        System.out.println("Error: Can't delete this folder");
+                else if (command[0].equalsIgnoreCase("DeleteFolder") && command.length == 2) {
+                    if (user == null || authenticator.checkCapabilities(user.getName(), command[1], s) % 10 == 1) {
+                        boolean success = s.deleteFolder(command[1]);
+                        if (!success) {
+                            System.out.println("Error: Can't delete this folder");
+                        }
+                    }
+                    else {
+                        System.out.println("Error: Permission denied");
                     }
                 }
                 else if (command[0].equalsIgnoreCase("DisplayDiskStatus")){
@@ -148,7 +158,35 @@ public class Main {
                 else if (command[0].equalsIgnoreCase("DisplayStorageInfo")){
                     System.out.println(s.displayStorageInfo());
                 }
-                else if (command[0].equalsIgnoreCase("Quit")){
+                else if(command[0].equalsIgnoreCase("TellUser")){
+                    if(user==null){
+                        System.out.println("admin");
+                    }
+                    else{
+                        System.out.println(user.getName());
+                    }
+                } else if (command[0].equalsIgnoreCase("Cuser")&&command.length == 3&&user==null) {
+                    User temp= new User(command[1],command[2]);
+                    if(!authenticator.Register(temp)){
+                        System.out.println("Error: Creating User Error");
+                    }
+                    
+                } else if (command[0].equalsIgnoreCase("Grant") && command.length==4&&user==null) {
+                    if(!authenticator.grantAccess(command[1],command[2],Integer.parseInt(command[3]),s)){
+                        System.out.println("Error: Couldn't grant permission command");
+                    }
+                } else if (command[0].equalsIgnoreCase("Login")&&command.length == 3) {
+                    User loggedInUser = new User(command[1], command[2]);
+                    if (loggedInUser.getName().equals("admin") && loggedInUser.getPwd() .equals("admin"))
+                        user = null;
+                    else {
+                        if (authenticator.login(loggedInUser)) {
+                            user = loggedInUser;
+                        } else {
+                            System.out.println("Error: Couldn't Log-in");
+                        }
+                    }
+                } else if (command[0].equalsIgnoreCase("Quit")){
                     saveSimulator();
                     return;
                 }
@@ -200,3 +238,5 @@ public class Main {
         return true;
     }
 }
+
+
