@@ -110,7 +110,6 @@ public class Authentication {
     }
 
     public int checkCapabilities(String username,String path, Simulator simulator){
-        String[] pathArray = path.split("/");
         Directory currentDir = simulator.navigateToEnclosingFolder(path);
 
         if (currentDir == null)

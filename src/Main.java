@@ -218,10 +218,12 @@ public class Main {
     private static void saveSimulator() {
         while (true) {
             System.out.println("Virtual file system save location: (':cancel' to cancel save)");
-            String path = scanner.nextLine() + ".vfs";
+            String path = scanner.nextLine();
 
             if (path.equalsIgnoreCase(":cancel"))
                 return;
+
+            path += ".vfs";
 
             File f = new File(path);
             if (f.exists() && !f.isDirectory()) {
