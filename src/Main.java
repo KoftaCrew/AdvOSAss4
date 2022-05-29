@@ -121,21 +121,36 @@ public class Main {
                     continue;
 
                 if (command[0].equalsIgnoreCase("CreateFile") && command.length == 3){
-                    boolean success = s.createFile(command[1], Integer.parseInt(command[2]));
-                    if (!success) {
-                        System.out.println("Error: Can't create this file");
+                    if (user == null || authenticator.checkCapabilities(user.getName(), command[1], s) / 10 == 1) {
+                        boolean success = s.createFile(command[1], Integer.parseInt(command[2]));
+                        if (!success) {
+                            System.out.println("Error: Can't create this file");
+                        }
+                    }
+                    else {
+                        System.out.println("Error: Permission denied");
                     }
                 }
                 else if (command[0].equalsIgnoreCase("CreateFolder") && command.length == 2){
-                    boolean success = s.createFolder(command[1]);
-                    if (!success) {
-                        System.out.println("Error: Can't create this folder");
+                    if (user == null || authenticator.checkCapabilities(user.getName(), command[1], s) / 10 == 1) {
+                        boolean success = s.createFolder(command[1]);
+                        if (!success) {
+                            System.out.println("Error: Can't create this folder");
+                        }
+                    }
+                    else {
+                        System.out.println("Error: Permission denied");
                     }
                 }
                 else if (command[0].equalsIgnoreCase("DeleteFile") && command.length == 2){
-                    boolean success = s.deleteFile(command[1]);
-                    if (!success) {
-                        System.out.println("Error: Can't delete this file");
+                    if (user == null || authenticator.checkCapabilities(user.getName(), command[1], s) % 10 == 1) {
+                        boolean success = s.deleteFile(command[1]);
+                        if (!success) {
+                            System.out.println("Error: Can't delete this file");
+                        }
+                    }
+                    else {
+                        System.out.println("Error: Permission denied");
                     }
                 }
                 else if (command[0].equalsIgnoreCase("DeleteFolder") && command.length == 2) {

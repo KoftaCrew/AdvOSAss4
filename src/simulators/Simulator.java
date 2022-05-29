@@ -74,7 +74,7 @@ abstract public class Simulator {
         return true;
     }
 
-    protected Directory navigateToEnclosingFolder(String pathString) {
+    public Directory navigateToEnclosingFolder(String pathString) {
         String[] path = pathString.split("/");
         if (!path[0].equalsIgnoreCase("root")) {
             return null;
